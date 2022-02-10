@@ -1,10 +1,10 @@
-#################################################################
-##                     Tgen Robot program                      ##
-##                                                             ##
-##                      Jason Clark                            ##
-##                   jaclark2@alaska.edu                       ##
-##                      2022-01-06                             ##
-#################################################################
+##############################################################
+##                   TGen Robot Program                     ##
+##                                                          ##
+##                      Jason Clark                         ##
+##                   jaclark2@alaska.edu                    ##
+##                      2022-01-06                          ##
+##############################################################
 
 # Creating a function and storing into robotProgram
 robotProgram<-function(sourceFile, 
@@ -13,7 +13,7 @@ robotProgram<-function(sourceFile,
                        destinationPlates=character(), 
                        outDir,
                        programDate=paste0(unlist(strsplit(as.character(Sys.Date()),split='-')),collapse = '') ){ # uses system date;
-  # can change programDateif needed when you call the function to whatever you want it to be
+  # can change programDate if needed when you call the function to whatever you want it to be
   
   # libraries
   if(!require(tidyverse)){
@@ -42,7 +42,7 @@ robotProgram<-function(sourceFile,
   
   # filter records
   ntc <- tsv %>%
-    filter(Sample == "NTC")
+    filter(Sample == "NEC")
   
   cq <- tsv %>%
     filter(Cq != "NaN")
@@ -79,6 +79,9 @@ robotProgram<-function(sourceFile,
   # initializing output key and instructions so we can fill them with data in the programming loop
   outputKey<-data.frame(Program=numeric(),Type=character(),Rack=integer(),PlateID=character())
   instructions<-character()
+  
+  programOutput <- data.frame()
+  programControls <- data.frame()
   
   while(nrow(drop_na(goodRemaining))>0){ # will keep looping as long as condition is true; when Source wells (e.g., no rows remain in goodRemaining) run out, loop ends
     # iterate programs
@@ -206,7 +209,11 @@ robotProgram<-function(sourceFile,
     
     # write outputs
     write.csv(programDF, file = paste0(outDir,programDate,'/Program_infoTable_',programDate,"_",progCounter,'.csv'), row.names = FALSE)
-    # above table is for troubleshooting. Columns could be reordered using select to make more sense. 
+    # above table is for troubleshooting. Columns could be reordered using select to make more sense.
+    
+    programOutput<-rbind(programOutput,programDF) # store program data for later output
+    programControls<-rbind(programControls,programDF) # store program data for later output
+    
     thisProgramFile<-paste0(outDir, programDate,'/Program_',programDate,"_",progCounter,'.csv')
     write.csv(programDF %>% 
                 select(sRack,SourceWell,dRack,DestinationWell,Volume,Tool) %>% 
@@ -272,7 +279,20 @@ robotProgram<-function(sourceFile,
     print('next program')
   } # if we're not out of Source wells, goes back to beginning of while() loop
   
-  write.csv(outputKey,file =paste0(outDir,programDate,'/Key_',programDate,'.txt'),row.names = FALSE)
+  write.csv(programOutput %>%
+              select(destPlate, DestinationWell, Sample) %>%
+              filter(Sample != 'NEC') %>%
+              mutate(Sample = gsub('TG', '', Sample)), file = paste0(outDir,programDate,'/',programDate,'_PIMpoint_upload','.csv'), row.names = FALSE)
+  
+  write.csv(programControls %>%
+              select(Sample, sourcePlate, destPlate, DestinationWell) %>%
+              filter(Sample == 'NEC') %>%
+              mutate(destPlate = gsub('160-', '', destPlate)) %>%
+              mutate(Concat = paste(Sample, sourcePlate, destPlate, sep = "-")) %>%
+              select(Concat, destPlate, DestinationWell), file = paste0(outDir,programDate,'/',programDate,'_Additional_controls','.csv'), row.names = FALSE)
+  
+  write.csv(outputKey, file = paste0(outDir, programDate, '/Key_', programDate,'.txt'), row.names = FALSE)
   # this might be useful, I mainly wrote it as a check on what the programs were doing
+  
   writeLines(instructions,paste0(outDir,programDate,'/Instructions_',programDate,'.txt'))
-} 
+}
