@@ -3,14 +3,15 @@
 ##                                                          ##
 ##                      Jason Clark                         ##
 ##                   jaclark2@alaska.edu                    ##
-##                      2022-01-06                          ##
+##                      2022-02-11                          ##
 ##############################################################
 
 # Creating a function and storing into robotProgram
 robotProgram<-function(sourceFile, 
                        firstSourceWell=character(),
                        firstDestinWell=character(),
-                       destinationPlates=character(), 
+                       destinationPlate_prefix=character(),
+                       destinationPlate_first=numeric(),
                        outDir,
                        programDate=paste0(unlist(strsplit(as.character(Sys.Date()),split='-')),collapse = '') ){ # uses system date;
   # can change programDate if needed when you call the function to whatever you want it to be
@@ -75,13 +76,15 @@ robotProgram<-function(sourceFile,
   # initializing some new variables that I will use
   progCounter=0 # this is the number of the current program
   firstDestinPlate<-1 # going to start putting things in plate 1
+  #make up some destin plates, more than we need, but they wont get used
+  destinationPlates<-paste0(destinationPlate_prefix,seq(destinationPlate_first,destinationPlate_first+100,1))
   destinationPlatesRemaining<-destinationPlates
+  print(paste('# of Dest. plates: ', length(destinationPlates)))
   # initializing output key and instructions so we can fill them with data in the programming loop
   outputKey<-data.frame(Program=numeric(),Type=character(),Rack=integer(),PlateID=character())
   instructions<-character()
   
   programOutput <- data.frame()
-  programControls <- data.frame()
   
   while(nrow(drop_na(goodRemaining))>0){ # will keep looping as long as condition is true; when Source wells (e.g., no rows remain in goodRemaining) run out, loop ends
     # iterate programs
@@ -212,7 +215,6 @@ robotProgram<-function(sourceFile,
     # above table is for troubleshooting. Columns could be reordered using select to make more sense.
     
     programOutput<-rbind(programOutput,programDF) # store program data for later output
-    programControls<-rbind(programControls,programDF) # store program data for later output
     
     thisProgramFile<-paste0(outDir, programDate,'/Program_',programDate,"_",progCounter,'.csv')
     write.csv(programDF %>% 
@@ -284,7 +286,7 @@ robotProgram<-function(sourceFile,
               filter(Sample != 'NEC') %>%
               mutate(Sample = gsub('TG', '', Sample)), file = paste0(outDir,programDate,'/',programDate,'_PIMpoint_upload','.csv'), row.names = FALSE)
   
-  write.csv(programControls %>%
+  write.csv(programOutput %>%
               select(Sample, sourcePlate, destPlate, DestinationWell) %>%
               filter(Sample == 'NEC') %>%
               mutate(destPlate = gsub('160-', '', destPlate)) %>%
