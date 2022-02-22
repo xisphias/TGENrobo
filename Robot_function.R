@@ -76,7 +76,7 @@ robotProgram<-function(sourceFile,
   # initializing some new variables that I will use
   progCounter=0 # this is the number of the current program
   firstDestinPlate<-1 # going to start putting things in plate 1
-  #make up some destin plates, more than we need, but they wont get used
+  # make up some destin plates, more than we need, but they won't get used
   destinationPlates<-paste0(destinationPlate_prefix,seq(destinationPlate_first,destinationPlate_first+100,1))
   destinationPlatesRemaining<-destinationPlates
   print(paste('# of Dest. plates: ', length(destinationPlates)))
@@ -85,6 +85,7 @@ robotProgram<-function(sourceFile,
   instructions<-character()
   
   programOutput <- data.frame()
+  programControls <- data.frame()
   
   while(nrow(drop_na(goodRemaining))>0){ # will keep looping as long as condition is true; when Source wells (e.g., no rows remain in goodRemaining) run out, loop ends
     # iterate programs
@@ -146,7 +147,7 @@ robotProgram<-function(sourceFile,
         goodNext<-goodRemaining[(nDest+1):nrow(goodRemaining),]
       }
       nextSourceWell<-source_avail[nDest+1,]$Source
-      nextDestinWell<-'A01'
+      nextDestinWell<-'A1'
       nextSourcePlate<-goodNext$SourcePlate[1]
     }
     if(nThese<=nDest){
@@ -172,7 +173,7 @@ robotProgram<-function(sourceFile,
       }
       nextSourceWell<-goodNext[1,]$Well
       nextSourcePlate<-goodNext$SourcePlate[1]
-      nextDestinWell<-ifelse(lastDestin$Destination=='H10','A01',destin_avail[nThese+1,]$Destination)
+      nextDestinWell<-ifelse(lastDestin$Destination=='H10','A1',destin_avail[nThese+1,]$Destination)
       instructions<-c(instructions,ifelse(lastDestin$Destination=='H10','last destination plate full','last destination plate partial'))
     }
     
@@ -182,7 +183,7 @@ robotProgram<-function(sourceFile,
     lastDestinPlate<-lastDestin$Rack
     theseDestinPlates<-firstDestinPlate:lastDestinPlate
     theseDestinPlateDF<-data.frame(dRack=theseDestinPlates,destPlate=destinationPlatesRemaining[theseDestinPlates])
-    nextDestinPlate<-ifelse(nextDestinWell=='A01',destinationPlatesRemaining[lastDestinPlate+1],destinationPlatesRemaining[lastDestinPlate])
+    nextDestinPlate<-ifelse(nextDestinWell=='A1',destinationPlatesRemaining[lastDestinPlate+1],destinationPlatesRemaining[lastDestinPlate])
     
     # program
     print('making program')
@@ -215,6 +216,7 @@ robotProgram<-function(sourceFile,
     # above table is for troubleshooting. Columns could be reordered using select to make more sense.
     
     programOutput<-rbind(programOutput,programDF) # store program data for later output
+    programControls<-rbind(programControls,programDF)
     
     thisProgramFile<-paste0(outDir, programDate,'/Program_',programDate,"_",progCounter,'.csv')
     write.csv(programDF %>% 
@@ -281,20 +283,20 @@ robotProgram<-function(sourceFile,
     print('next program')
   } # if we're not out of Source wells, goes back to beginning of while() loop
   
-  write.csv(programOutput %>%
-              select(destPlate, DestinationWell, Sample) %>%
-              filter(Sample != 'NEC') %>%
-              mutate(Sample = gsub('TG', '', Sample)), file = paste0(outDir,programDate,'/',programDate,'_PIMpoint_upload','.csv'), row.names = FALSE)
+  write.table(programOutput %>%
+                select(destPlate, DestinationWell, Sample) %>%
+                filter(Sample != 'NEC') %>%
+                mutate(Sample = gsub('TG', '', Sample)), file = paste0(outDir,programDate,'/',programDate,'_PIMpoint_upload','.csv'), sep = ",", row.names = FALSE, col.names = FALSE)
   
-  write.csv(programOutput %>%
-              select(Sample, sourcePlate, destPlate, DestinationWell) %>%
-              filter(Sample == 'NEC') %>%
-              mutate(destPlate = gsub('160-', '', destPlate)) %>%
-              mutate(Concat = paste(Sample, sourcePlate, destPlate, sep = "-")) %>%
-              select(Concat, destPlate, DestinationWell), file = paste0(outDir,programDate,'/',programDate,'_Additional_controls','.csv'), row.names = FALSE)
+  write.table(programControls %>%
+                select(Sample, sourcePlate, destPlate, DestinationWell) %>%
+                filter(Sample == 'NEC') %>%
+                mutate(destPlate = gsub('160-', '', destPlate)) %>%
+                mutate(Concat = paste(Sample, sourcePlate, destPlate, sep = "-")) %>%
+                select(Concat, destPlate, DestinationWell), file = paste0(outDir,programDate,'/',programDate,'_Additional_controls','.csv'), sep = ",", row.names = FALSE, col.names = FALSE)
   
-  write.csv(outputKey, file = paste0(outDir, programDate, '/Key_', programDate,'.txt'), row.names = FALSE)
+  write.csv(outputKey, file = paste0(outDir, programDate, '/Key_', programDate,'.csv'), row.names = FALSE)
   # this might be useful, I mainly wrote it as a check on what the programs were doing
   
-  writeLines(instructions,paste0(outDir,programDate,'/Instructions_',programDate,'.txt'))
+  writeLines(instructions,paste0(outDir,programDate,'/Instructions_',programDate,'.csv'))
 }
