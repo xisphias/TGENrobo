@@ -3,12 +3,11 @@
 ##                                                          ##
 ##                      Jason Clark                         ##
 ##                   jaclark2@alaska.edu                    ##
-##                      2022-02-11                          ##
+##                      2022-02-22                          ##
 ##############################################################
 
 # Creating a function and storing into robotProgram
-robotProgram<-function(sourceFile, 
-                       firstSourceWell=character(),
+robotProgram<-function(sourceFile,
                        firstDestinWell=character(),
                        destinationPlate_prefix=character(),
                        destinationPlate_first=numeric(),
@@ -51,6 +50,12 @@ robotProgram<-function(sourceFile,
   good <- rbind(ntc, cq)
   
   good <- arrange(good, File, Well)
+  
+  #format source wells for no leading 0's
+  good <- good %>% mutate(Well=if_else(substr(Well,2,2)==0,gsub('0','',Well),Well))
+  
+  #first source well from list
+  firstSourceWell<- good$Well[1]
   
   # Parse out second number in File column entries --> Source plate
   # The columns in the source file need to stay in identical order; also, for "File" column, format needs to be e.g., 20211112_980102_PostDnase_AW.rdml
