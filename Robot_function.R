@@ -288,11 +288,37 @@ robotProgram<-function(sourceFile,
     print('next program')
   } # if we're not out of Source wells, goes back to beginning of while() loop
   
-  write.table(programOutput %>%
+# write.table(programOutput %>%
+#               select(destPlate, DestinationWell, Sample) %>%
+#               filter(Sample != 'NEC') %>%
+#               mutate(Sample = gsub('TG', '', Sample)), file = paste0(outDir,programDate,'/',programDate,'_PIMpoint_upload','.csv'), sep = ",", row.names = FALSE, col.names = FALSE)
+  write.csv(programOutput %>%
                 select(destPlate, DestinationWell, Sample) %>%
                 filter(Sample != 'NEC') %>%
-                mutate(Sample = gsub('TG', '', Sample)), file = paste0(outDir,programDate,'/',programDate,'_PIMpoint_upload','.csv'), sep = ",", row.names = FALSE, col.names = FALSE)
-  
+                mutate(Sample = gsub('TG', '', Sample)), file = paste0(outDir,programDate,'/',programDate,'_PIMpoint_upload','.csv'), row.names = FALSE)              
+  #potential fix for weird database error
+    #Here we are checking that the header is the first line
+    	pimpointHeader<-programOutput %>%
+    	              select(destPlate, DestinationWell, Sample) %>%
+    	              filter(Sample != 'NEC') %>%
+    	              mutate(Sample = gsub('TG', '', Sample)) %>% 
+    	              names()
+    	tmp<-readLines(paste0(outDir,programDate,'/',programDate,'_PIMpoint_upload','.csv'))
+    	# print(paste0("\"",paste(pimpointHeader,collapse = "\",\""),"\""))
+    	# print(tmp[1])
+    	if(tmp[1]==paste0("\"",paste(pimpointHeader,collapse = "\",\""),"\"")){
+    		tmp<-tmp[-1]
+    		print('Removing header: TRUE')
+    		writeLines(tmp, con=paste0(outDir,programDate,'/',programDate,'_PIMpoint_upload','.csv'))
+    	}else{
+    	  print('Removing header: FALSE')
+    	}
+    #you could play it loose and skip the header lines and if statement and just use something like:
+    	 # writeLines(readLines(paste0(outDir,programDate,'/',programDate,'_PIMpoint_upload','.csv'))[-1], 
+    	 #            con=paste0(outDir,programDate,'/',programDate,'_PIMpoint_upload','.csv'))
+    	 # 
+  	 
+               
   write.table(programControls %>%
                 select(Sample, sourcePlate, destPlate, DestinationWell) %>%
                 filter(Sample == 'NEC') %>%
